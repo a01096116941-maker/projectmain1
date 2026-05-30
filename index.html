@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <link class="apple-touch-icon" href="icon.jpg">
+    <link rel="apple-touch-icon" href="icon.jpg">
+    <link rel="icon" type="image/jpeg" href="icon.jpg">
+    
     <meta name="apple-mobile-web-app-title" content="정부24">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -383,7 +385,7 @@
                             
                             <div class="col-span-7 flex justify-end">
                                 <div class="p-1 bg-white border-2 border-gray-300 rounded-none shadow-xs">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://a01096116941-maker.github.io/qrend/?mode=verify&color=000000" alt="QR" class="w-32 h-32 rounded-none">
+                                    <img id="dynamic-qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://a01096116941-maker.github.io/qrend/?mode=verify&color=000000" alt="QR" class="w-32 h-32 rounded-none">
                                 </div>
                             </div>
                         </div>
@@ -481,9 +483,10 @@
         let isRRNVisible = false;
         let faceTimeoutId = null;
         
-        // 타이머용 전역 변수들
         let timeLeft = 30;
         let timerIntervalId = null;
+
+        const ABSOLUTE_QR_DATA = "https://thunderous-salmiakki-632cbd.netlify.app/?mode=verify";
 
         function handleSearchKeyPress(event) {
             if (event.key === 'Enter') {
@@ -580,19 +583,22 @@
             }
         }
 
-        // 🌟 [요청 패치] 신분증 화면(main-id-page) 들어갈 때마다 30초 타이머 및 바 애니메이션 리셋/초기화 구동용 함수 독립 구현
         function startFreshCountdown() {
             if (timerIntervalId) clearInterval(timerIntervalId);
             timeLeft = 30;
             
             const timerText = document.getElementById('countdown-text');
             const timerBar = document.getElementById('dynamic-timer-bar');
+            const qrImage = document.getElementById('dynamic-qr-image');
             
             timerText.innerText = "30초";
             timerBar.style.transition = "none";
             timerBar.style.width = "100%";
             
-            // 레이아웃 스레드 동기화 후 다시 스무스하게 입힘
+            if (qrImage) {
+                qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(ABSOLUTE_QR_DATA)}&color=000000`;
+            }
+            
             setTimeout(() => {
                 timerBar.style.transition = "width 1s linear";
             }, 50);
@@ -603,6 +609,11 @@
                     timeLeft = 30; 
                     timerBar.style.transition = "none";
                     timerBar.style.width = "100%";
+                    
+                    if (qrImage) {
+                        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(ABSOLUTE_QR_DATA)}&color=000000`;
+                    }
+                    
                     setTimeout(() => { timerBar.style.transition = "width 1s linear"; }, 50);
                 }
                 timerText.innerText = `${timeLeft}초`;
@@ -629,7 +640,6 @@
             }
             document.getElementById(targetPageId).classList.remove('hidden');
 
-            // 신분증 화면 활성화되므로 즉시 fresh 타이머 가동
             if (targetPageId === 'main-id-page') {
                 startFreshCountdown();
             }
@@ -735,7 +745,6 @@
                 document.getElementById(targetPageId).classList.remove('hidden');
                 loading.classList.add('hidden');
 
-                // 상세 보기 등 진입 완료 시점별 타이머 연동 제어
                 if (targetPageId === 'main-id-page') {
                     startFreshCountdown();
                 }
@@ -776,7 +785,7 @@
             loading.classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('gov-home-page').classList.add('hidden');
-                document.getElementById('main-id-page').classList.add('hidden'); // 메인화면에서 누를때 감춤장치
+                document.getElementById('main-id-page').classList.add('hidden');
                 document.getElementById('password-screen').classList.remove('hidden');
                 loading.classList.add('hidden');
             }, 80);
@@ -787,7 +796,6 @@
         function quickBackToMain() { 
             document.getElementById('detail-id-page').classList.add('hidden');
             document.getElementById('main-id-page').classList.remove('hidden');
-            // 메인 신분증으로 백 복귀했으므로 타이머 리셋 동기화
             startFreshCountdown();
         }
 
@@ -848,6 +856,24 @@
             }
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            function syncRealTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const realtimeClockBox = document.getElementById('realtime-clock');
+                if (realtimeClockBox) {
+                    realtimeClockBox.innerText = `${year}년 ${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
+                }
+            }
+            setInterval(syncRealTime, 1000);
+            syncRealTime();
+        });
+
         function updateDots() {
             const dots = document.querySelectorAll('#dot-container div');
             dots.forEach((dot, index) => {
@@ -858,22 +884,6 @@
                 }
             });
         }
-
-        function syncRealTime() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const realtimeClockBox = document.getElementById('realtime-clock');
-            if (realtimeClockBox) {
-                realtimeClockBox.innerText = `${year}년 ${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
-            }
-        }
-        setInterval(syncRealTime, 1000);
-        syncRealTime();
     </script>
 </body>
 </html>
